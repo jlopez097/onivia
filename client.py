@@ -1,115 +1,83 @@
 import requests
 import json
 import logging
-
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
+@dataclass
 class FTTH:
-    _instance = None
+    home_id: str
 
-    def __init__(self, home_id):
-        self.home_id = home_id
+@dataclass
+class ImpulseFTTH:
 
-class ImpulseFTTH(FTTH):
-    _instance = None
-
-    def __init__(self, home_id, gescal, product_package):
-        self.home_id = super().__init__(home_id)
-        self.gescal = gescal
-        self.voip1_sip_username = None
-        self.voip1_sip_password = None
-        self.voip2_sip_username = None 
-        self.voip2_sip_password = None 
-        self.fixed_ip_mac = None 
-        self.fixed_ip_adress = None 
-        self.product_package = product_package
-        self.additional_info = None 
+    home_id: str
+    gescal: str 
+    product_package: str
     
+@dataclass
 class Mobile:
-    _instance = None 
 
-    def __init__(self, has_advertise, add_type, iccid, road_type, road, number,
-    postal_code, city, province):
+    has_advertise: bool
+    add_type: str
+    iccid: str 
+    road_type: str
+    road: str
+    number: str 
+    postal_code: str
+    city: str
+    province: str
 
-        self.has_advertise = has_advertise
-        self.add_type = add_type
-        self.current_phone_number = None 
-        self.donor_operator = None 
-        self.old_iccid = None 
-        self.iccid = iccid 
-        self.road_type = road_type 
-        self.road = road 
-        self.number = number 
-        self.postal_code = postal_code 
-        self.city = city 
-        self.province = province 
-
+@dataclass
 class Place:
-    _instance = None 
 
-    def __init__(self, id):
+    id: str
 
-        self.id = id
-
+@dataclass
 class ProductCharacts:
-    _instance = None 
 
-    def __init__(self, name, value):
+    name: str
+    value: str
 
-        self.name = name 
-        self.value = value 
-
+@dataclass
 class CustomerAccount: 
-    _instance = None 
 
-    def __init__(self, id, firstName, secondName, thirdName, birthDate, email,
-    phone, phone2, documentType, documentNumber):
+    id: str 
+    firstName: str 
+    secondName: str 
+    thirdName: str 
+    birthDate: str 
+    email: str 
+    phone: str 
+    phone2: str 
+    documentType: str 
+    documentNumber: str 
 
-        self.id = id 
-        self.firstName = firstName 
-        self.secondName = secondName 
-        self.thirdName = thirdName 
-        self.birthDate = birthDate
-        self.email = email 
-        self.phone = phone 
-        self.phone2 = phone2 
-        self.documentType = documentType 
-        self.documentNumber = documentNumber
-
+@dataclass
 class Product:
-    _instance = None 
 
-    def __init__(self, id, productCharacts: ProductCharacts, productOrderItems):
+    id: str 
+    productCharacts: ProductCharacts 
+    productOrderItems: list 
 
-        self.id = id
-        self.productCharacts = productCharacts 
-        self.productOrderItems = productOrderItems
-        self.customerAccount = None
-
+@dataclass
 class ProductOrderItem:
-    _instance = None 
 
-    def __init__(self, action, place: Place, product: Product):
+    action: str 
+    place: Place 
+    product: Product
 
-        self.action = action
-        self.place = place 
-        self.product = product
-
+@dataclass
 class Order:
-    _instance = None 
 
-    def __init__(self, orderId, externalId, orderDate, requestStartDate, 
-    productOrderItem: ProductOrderItem):
-
-        self.orderId = orderId
-        self.externalId = externalId 
-        self.orderDate = orderDate
-        self.requestStartDate = requestStartDate
-        self.productOrderItem = productOrderItem
+    orderId: str 
+    externalId: str 
+    orderDate: str 
+    requestStartDate: str 
+    productOrderItem: ProductOrderItem 
 
 class Client:
-
     _instance = None
 
     def __init__(self, url: str, id: str, username: str, password: str):
@@ -151,7 +119,7 @@ class Client:
 
         return r.json()
 
-    def _get(self, path: str, auth=True) -> dict:
+    def _get(self, path: str, auth=True) -> dict|list:
         
         headers = {"accept": "*/*"} 
         
@@ -227,7 +195,30 @@ class Client:
         return self._post("/productOrderingManagement/productOrder/cancel", 
         data=data)
 
-    
-    
-    
+    def get_productOrder(self, id: str) -> dict:
 
+        return self._get("/productOrderingManagement/productOrder/{}".format(id))
+    
+    def get_commercial_catalog(self) -> list:
+
+        return self._get("/productOrderingManagement/catalog")
+
+    def get_street_types(self) -> list:
+    
+        return self._get("/productOrderingManagement/catalog")
+
+    def get_provinces(self) -> list:
+
+        return self._get("/productOrderingManagement/mobile/provinces")
+
+    def get_donor_operators(self) -> list:
+
+        return self._get("/productOrderingManagement/mobile/")
+
+    def get_reasons(self) -> list:
+
+        return self._get("/productOrderingManagement/mobile/reasons")
+
+    def get_additional_info(self) -> list:
+
+        return self._get("/productOrderingManagement/ftth/additional-info")
