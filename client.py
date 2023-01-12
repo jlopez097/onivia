@@ -1,7 +1,9 @@
 import requests
 import json
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
+
+## TODO: Implementar refresh_method para controlar expiracion de token
 
 logger = logging.getLogger(__name__)
 
@@ -14,13 +16,23 @@ class ImpulseFTTH:
 
     home_id: str
     gescal: str 
+    voip1_sip_username: str 
+    voip1_sip_password: str 
+    voip2_sip_username: str 
+    voip2_sip_password: str 
+    fixed_ip_mac: str 
+    fixed_ip_adress: str 
     product_package: str
+    additional_info: str
     
 @dataclass
 class Mobile:
 
     has_advertise: bool
     add_type: str
+    current_phone_number: str 
+    donor_operator: str 
+    old_iccid: str
     iccid: str 
     road_type: str
     road: str
@@ -44,22 +56,22 @@ class ProductCharacts:
 class CustomerAccount: 
 
     id: str 
-    firstName: str 
-    secondName: str 
-    thirdName: str 
-    birthDate: str 
+    first_name: str 
+    second_name: str 
+    third_name: str 
+    birth_date: str 
     email: str 
     phone: str 
     phone2: str 
-    documentType: str 
-    documentNumber: str 
+    document_type: str 
+    document_number: str 
 
 @dataclass
 class Product:
 
     id: str 
-    productCharacts: ProductCharacts 
-    productOrderItems: list 
+    product_characts: ProductCharacts 
+    product_order_items: list 
 
 @dataclass
 class ProductOrderItem:
@@ -71,36 +83,48 @@ class ProductOrderItem:
 @dataclass
 class Order:
 
-    orderId: str 
-    externalId: str 
-    orderDate: str 
-    requestStartDate: str 
-    productOrderItem: ProductOrderItem 
+    order_id: str 
+    external_id: str 
+    order_date: str 
+    request_start_date: str 
+    product_order_item: ProductOrderItem 
 
-class Client:
-    _instance = None
+@dataclass
+class VoipAttributes:
 
-    def __init__(self, url: str, id: str, username: str, password: str):
+    voip_1_cli: str 
+    voip_1_manual_sip_credentials_active: bool
+    voip_1_username: str
+    voip_1_password: str
+    voip_1_additional_info: str 
+    voip_2_cli: str 
+    voip_2_manual_sip_credentials_active: bool
+    voip_2_username: str
+    voip_2_password: str
+    voip_2_additional_info: str 
+
+class OniviaBaseClient:
+    
+    def __init__(self, url: str, client_id: str, username: str, password: str):
         self.base_url = url
-        self.id = id 
+        self.client_id = client_id 
         self.username = username 
         self.password = password
-
-        self.fiber = None
-        self.mobile = None
+        self.token = None
+        self.token_type = None
 
         self.last_request = None
         self.last_response = None
 
-    def _post(self, path: str, data, auth=True) -> dict:
+    def _post(self, path: str, data) -> dict:
 
         headers = {
-            'Authorization': '',
-            'Content-Type': 'application/x-www-form-urlencoded'
+            'Content-Type': 'application/json',
+            "accept": "application/json",
         }
 
-        if auth:
-            headers.update({"Authorization": "{}".format(self.token)})
+        if self.token:
+            headers.update({"Authorization": "{} {}".format(self.token_type, self.token)})
 
         r = requests.post(
             url="{}/{}".format(self.base_url, path),
@@ -124,7 +148,7 @@ class Client:
         headers = {"accept": "*/*"} 
         
         if auth:
-            headers.update({"Authorization": "{}".format(self.token)})
+            headers.update({"Authorization": "{} {}".format(self.token_type, self.token)})
 
         r = requests.get(
             url="{}/{}".format(self.base_url, path),
@@ -141,18 +165,48 @@ class Client:
 
         return r.json()
 
-    def check_login(self) -> bool:
-        response = self._post(
-            "/auth/realms/onivia/protocol/openid-connect/token", 
-            f'client_id={self.id}&grant_type=password&username={self.username}&password={self.password}', 
-            auth=False
+    def get_token(self) -> dict:
+
+        data = {
+            "client_id": self.client_id, 
+            "grant_type": "password",
+            "username": self.username,
+            "password": self.password
+        }
+
+        headers = {
+                'Content-Type': 'application/x-www-form-urlencoded'
+        }
+
+        response = requests.post(
+            "{}/auth/realms/onivia/protocol/openid-connect/token".format(self.base_url), 
+            data = data, 
+            headers = headers
         )
-        self.token = response.get("access_token")
+
+        return response.json()
+    
+    def check_login(self) -> bool:
+        
+        if self.token: ##Y el token no ha expirado
+            return True
+
+        r = self.get_token()
+
+        self.token = r.get("access_token")
+        self.token_type = r.get("token_type")
 
         return True
 
-    ## Coverage methods ##
+class OniviaCoverageClient(OniviaBaseClient):
 
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if OniviaCoverageClient._instance is None:
+            OniviaCoverageClient._instance = object.__new__(cls)
+        return OniviaCoverageClient._instance
+    
     def get_coincident_streets(self, name: str) -> list:
 
         self.check_login()
@@ -177,25 +231,32 @@ class Client:
 
         return self._get("/coverage/v1/homes?g17={}".format(g17))
 
-    ## Product Ordering methods ##
+class OniviaProductOrderingClient(OniviaBaseClient):
     
-    def productOrder_create(self, data: Order) -> dict:
+    _instance = None
 
-        return self._post("/productOrderingManagement/productOrder", data=data)
+    def __new__(cls, *args, **kwargs):
+        if OniviaProductOrderingClient._instance is None:
+            OniviaProductOrderingClient._instance = object.__new__(cls)
+        return OniviaProductOrderingClient._instance
 
-    def productOrder_cancel(self, orderId: str, requestedCancellationDate: str,
-    cancellationReason: str) -> dict:
+    def product_order_create(self, order: Order) -> dict:
+
+        return self._post("/productOrderingManagement/productOrder", data=asdict(order))
+
+    def product_order_cancel(self, order_id: str, requested_cancellation_date: str,
+    cancellation_reason: str) -> dict:
 
         data = {
-            "orderId": orderId,
-            "requestedCancellationDate": requestedCancellationDate,
-            "cancellationReason": cancellationReason
+            "orderId": order_id,
+            "requestedCancellationDate": requested_cancellation_date,
+            "cancellationReason": cancellation_reason
         }
 
         return self._post("/productOrderingManagement/productOrder/cancel", 
         data=data)
 
-    def get_productOrder(self, id: str) -> dict:
+    def get_product_order(self, id: str) -> dict:
 
         return self._get("/productOrderingManagement/productOrder/{}".format(id))
     
@@ -222,3 +283,44 @@ class Client:
     def get_additional_info(self) -> list:
 
         return self._get("/productOrderingManagement/ftth/additional-info")
+
+    def cto_query(self, product_id: str, cto_code=None) -> dict:
+
+        data = {"ctoCode": cto_code}
+
+        return self._post("/productOrderingManagement/ftth/{}/queryCto".format(product_id), data=data)
+
+    def cto_change(self, product_id: str, cto_final_code: str, cto_final_port: str, sp2_final_code: str, sp2_final_port: str, reason: str) -> dict:
+
+        data = {
+            "ctoFinalCode": cto_final_code, 
+            "ctoFinalPort": cto_final_port, 
+            "sp2FinalCode": sp2_final_code, 
+            "sp2FinalPort": sp2_final_port, 
+            "reason": reason
+        }
+
+        return self._post("/productOrderingManagement/ftth/{}/changeCto".format(product_id), data=data)
+
+    def exec_test(self, product_id: str, test_id: str) -> dict:
+        
+        return self._get("/productOrderingManagement/ftth/{}/test/{}".format(product_id, test_id))
+
+    def voip_mod(self, product_id: str, product_package: str, voip_attributes: VoipAttributes) -> dict:
+
+        data = {
+            "product_package": product_package,
+            "voipAttributes": asdict(voip_attributes)
+        }
+        
+        return self._post("/productOrderingManagement/ftth/{}/voipChange".format(product_id), data=data)
+    
+    def fixed_ip_change(self, product_id: str, ip_enable: str, ip_adress: str, ip_mac: str):
+
+        data = {
+            "ipEnable": ip_enable,
+            "ipAdress": ip_adress, 
+            "ipMac": ip_mac 
+        }    
+
+        return self._post("/productOrderingManagement/ftth/{}/fixedIpChange".format(product_id), data=data)
