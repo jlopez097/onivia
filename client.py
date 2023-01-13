@@ -2,6 +2,7 @@ import requests
 import json
 import logging
 from dataclasses import dataclass, asdict
+from typing import Union, List
 
 ## TODO: Implementar refresh_method para controlar expiracion de token
 
@@ -70,8 +71,9 @@ class CustomerAccount:
 class Product:
 
     id: str 
-    product_characts: ProductCharacts 
+    product_characts: List[ProductCharacts]
     product_order_items: list 
+    customer_account: CustomerAccount
 
 @dataclass
 class ProductOrderItem:
@@ -88,6 +90,27 @@ class Order:
     order_date: str 
     request_start_date: str 
     product_order_item: ProductOrderItem 
+
+@dataclass
+class CTO:
+
+    codigo_cto: str
+    codigo_sp1: str
+    codigo_sp2: str
+    estado_puerto: str
+    puerto_cto: str
+    puerto_sp2: str
+
+@dataclass 
+class OutputParam:
+
+    key: str 
+    value: str
+
+@dataclass 
+class Data: 
+
+    output_param: List[OutputParam]
 
 @dataclass
 class VoipAttributes:
@@ -110,8 +133,8 @@ class OniviaBaseClient:
         self.client_id = client_id 
         self.username = username 
         self.password = password
-        self.token = None
-        self.token_type = None
+        self._token = None
+        self._token_type = None
 
         self.last_request = None
         self.last_response = None
@@ -123,8 +146,8 @@ class OniviaBaseClient:
             "accept": "application/json",
         }
 
-        if self.token:
-            headers.update({"Authorization": "{} {}".format(self.token_type, self.token)})
+        if self._token:
+            headers.update({"Authorization": "{} {}".format(self._token_type, self._token)})
 
         r = requests.post(
             url="{}/{}".format(self.base_url, path),
@@ -139,16 +162,16 @@ class OniviaBaseClient:
             "url": "{}{}".format(self.base_url, path),
         }
         
-        self.last_response = r.json()
+        self.last_response = r
 
-        return r.json()
+        return r
 
-    def _get(self, path: str, auth=True) -> dict|list:
+    def _get(self, path: str) -> Union[dict, list]:
         
-        headers = {"accept": "*/*"} 
+        headers = {"accept": "application/json"} 
         
-        if auth:
-            headers.update({"Authorization": "{} {}".format(self.token_type, self.token)})
+        if self._token:
+            headers.update({"Authorization": "{} {}".format(self._token_type, self._token)})
 
         r = requests.get(
             url="{}/{}".format(self.base_url, path),
@@ -161,11 +184,11 @@ class OniviaBaseClient:
             "url": "{}{}".format(self.base_url, path),
         }  
 
-        self.last_response = r.json()
+        self.last_response = r
 
-        return r.json()
+        return r
 
-    def get_token(self) -> dict:
+    def _get_token(self) -> dict:
 
         data = {
             "client_id": self.client_id, 
@@ -184,17 +207,17 @@ class OniviaBaseClient:
             headers = headers
         )
 
-        return response.json()
+        return response
     
-    def check_login(self) -> bool:
+    def _check_login(self) -> bool:
         
-        if self.token: ##Y el token no ha expirado
+        if self._token: ##Y el token no ha expirado
             return True
 
-        r = self.get_token()
+        r = self._get_token()
 
-        self.token = r.get("access_token")
-        self.token_type = r.get("token_type")
+        self._token = r.get("access_token")
+        self._token_type = r.get("token_type")
 
         return True
 
@@ -209,25 +232,25 @@ class OniviaCoverageClient(OniviaBaseClient):
     
     def get_coincident_streets(self, name: str) -> list:
 
-        self.check_login()
+        self._check_login()
 
         return self._get("/coverage/v1/streets?name={}".format(name))
 
     def get_coincident_number_streets(self, name: str, number: str) -> list:
 
-        self.check_login()
+        self._check_login()
 
         return self._get("/coverage/v1/sites/numbers?name={} {}".format(name, number))
 
     def get_num_street_g12(self, g12: str) -> list:
 
-        self.check_login()
+        self._check_login()
 
         return self._get("/coverage/v1/streetNumbers?g12={}".format(g12))
 
     def get_homes_by_g17(self, g17: str) -> list:
 
-        self.check_login()
+        self._check_login()
 
         return self._get("/coverage/v1/homes?g17={}".format(g17))
 
@@ -242,11 +265,15 @@ class OniviaProductOrderingClient(OniviaBaseClient):
 
     def product_order_create(self, order: Order) -> dict:
 
+        self._check_login()
+
         return self._post("/productOrderingManagement/productOrder", data=asdict(order))
 
     def product_order_cancel(self, order_id: str, requested_cancellation_date: str,
     cancellation_reason: str) -> dict:
 
+        self._check_login()
+        
         data = {
             "orderId": order_id,
             "requestedCancellationDate": requested_cancellation_date,
@@ -258,39 +285,57 @@ class OniviaProductOrderingClient(OniviaBaseClient):
 
     def get_product_order(self, id: str) -> dict:
 
+        self._check_login()
+
         return self._get("/productOrderingManagement/productOrder/{}".format(id))
     
     def get_commercial_catalog(self) -> list:
+
+        self._check_login()
 
         return self._get("/productOrderingManagement/catalog")
 
     def get_street_types(self) -> list:
     
+        self._check_login()
+
         return self._get("/productOrderingManagement/catalog")
 
     def get_provinces(self) -> list:
 
+        self._check_login()
+        
         return self._get("/productOrderingManagement/mobile/provinces")
 
     def get_donor_operators(self) -> list:
 
+        self._check_login()
+        
         return self._get("/productOrderingManagement/mobile/")
 
     def get_reasons(self) -> list:
+
+        self._check_login()
 
         return self._get("/productOrderingManagement/mobile/reasons")
 
     def get_additional_info(self) -> list:
 
+        self._check_login()
+
         return self._get("/productOrderingManagement/ftth/additional-info")
 
     def cto_query(self, product_id: str, cto_code=None) -> dict:
 
+        self._check_login()
+        
         data = {"ctoCode": cto_code}
 
         return self._post("/productOrderingManagement/ftth/{}/queryCto".format(product_id), data=data)
 
     def cto_change(self, product_id: str, cto_final_code: str, cto_final_port: str, sp2_final_code: str, sp2_final_port: str, reason: str) -> dict:
+
+        self._check_login()
 
         data = {
             "ctoFinalCode": cto_final_code, 
@@ -304,10 +349,14 @@ class OniviaProductOrderingClient(OniviaBaseClient):
 
     def exec_test(self, product_id: str, test_id: str) -> dict:
         
+        self._check_login()
+        
         return self._get("/productOrderingManagement/ftth/{}/test/{}".format(product_id, test_id))
 
     def voip_mod(self, product_id: str, product_package: str, voip_attributes: VoipAttributes) -> dict:
 
+        self._check_login()
+        
         data = {
             "product_package": product_package,
             "voipAttributes": asdict(voip_attributes)
@@ -317,6 +366,8 @@ class OniviaProductOrderingClient(OniviaBaseClient):
     
     def fixed_ip_change(self, product_id: str, ip_enable: str, ip_adress: str, ip_mac: str):
 
+        self._check_login()
+        
         data = {
             "ipEnable": ip_enable,
             "ipAdress": ip_adress, 
