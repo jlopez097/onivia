@@ -1,8 +1,8 @@
 import requests
-import json
 import logging
 from dataclasses import dataclass, asdict
 from typing import Union, List
+from utils import snake_to_camelcase_dict
 
 ## TODO: Implementar refresh_method para controlar expiracion de token
 
@@ -267,7 +267,11 @@ class OniviaProductOrderingClient(OniviaBaseClient):
 
         self._check_login()
 
-        return self._post("/productOrderingManagement/productOrder", data=asdict(order))
+        order = asdict(order)
+        order.pop('order_id')
+        order = snake_to_camelcase_dict(order)
+
+        return self._post("/productOrderingManagement/productOrder", data=order)
 
     def product_order_cancel(self, order_id: str, requested_cancellation_date: str,
     cancellation_reason: str) -> dict:
@@ -283,7 +287,7 @@ class OniviaProductOrderingClient(OniviaBaseClient):
         return self._post("/productOrderingManagement/productOrder/cancel", 
         data=data)
 
-    def get_product_order(self, id: str) -> dict:
+    def get_product_order(self, id: str) -> Order:
 
         self._check_login()
 
@@ -299,7 +303,7 @@ class OniviaProductOrderingClient(OniviaBaseClient):
     
         self._check_login()
 
-        return self._get("/productOrderingManagement/catalog")
+        return self._get("/productOrderingManagement/mobile/streetTypes")
 
     def get_provinces(self) -> list:
 
@@ -364,7 +368,7 @@ class OniviaProductOrderingClient(OniviaBaseClient):
         
         return self._post("/productOrderingManagement/ftth/{}/voipChange".format(product_id), data=data)
     
-    def fixed_ip_change(self, product_id: str, ip_enable: str, ip_adress: str, ip_mac: str):
+    def fixed_ip_change(self, product_id: str, ip_enable: str, ip_adress: str, ip_mac: str) -> dict:
 
         self._check_login()
         

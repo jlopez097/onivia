@@ -1,9 +1,7 @@
-from typing import Union
 import pytest 
 from client import OniviaCoverageClient, OniviaProductOrderingClient, Order, ProductOrderItem, Place, Product, ProductCharacts, CustomerAccount, CTO, Data, OutputParam, VoipAttributes
 import requests
 from requests import Response
-from dataclasses import asdict
 
 @pytest.fixture
 def onivia_coverage_client():
@@ -265,7 +263,7 @@ def test_rubik_owner_oniviav2_client_get_homes_by_g17(mocker, onivia_coverage_cl
 def test_rubik_owner_oniviav2_client_product_order_create(mocker, onivia_product_ordering_client):
 
     order = Order(
-        "1",
+        "",
         "12312314",
         "",
         "",
@@ -293,13 +291,50 @@ def test_rubik_owner_oniviav2_client_product_order_create(mocker, onivia_product
             )
         )
     )
+    
+    order_dict = {
+        "requestStartDate": "",
+        "externalId": "12312314",
+        "productOrderItem": [
+            {
+                "place": {
+                    "id": "P0800076000000000000000000000000010543"
+                },
+                "action": "add",
+                "productCharacteristics": [
+                    {
+                        "name": "gescal", 
+                        "value": "08000180234300002 0012"
+                    },
+                    {
+                        "name": "home_id", 
+                        "value": "P0800018000000000000000000000000092267"
+                    },
+                    {
+                        "name": "product_package", 
+                        "value": "FIBRA"
+                    }
+                ],
+                "customerAccount": {
+                    "firstName": "Manuel",
+                    "secondName": "Perez",
+                    "thirdName": "Gonzalez",
+                    "email": "manuel@correo.com",
+                    "phone": "666889955",
+                    "documentType": "DNI",
+                    "documentNumber": "61186091L"
+                }
+            }
+        ]
+    }
 
-    mocker.patch.object(onivia_product_ordering_client, "_post",
+    mocked = mocker.patch.object(onivia_product_ordering_client, "_post",
         return_value={"orderId": "1"}
     )
 
     po_cr = onivia_product_ordering_client.product_order_create(order)
 
+    assert mocked.assert_called_with('/productOrderingManagement/productOrder',data=order_dict)
     assert type(po_cr) == dict 
     assert po_cr == {"orderId": "1"}
     assert type(po_cr["orderId"]) == str
@@ -325,13 +360,13 @@ def test_rubik_owner_oniviav2_client_get_product_order(mocker, onivia_product_or
     id = "1"
 
     mocker.patch.object(onivia_product_ordering_client, "_get",
-        return_value=asdict(Order("1","1","1","1",None))
+        return_value=Order("1","1","1","1",None)
     )
 
     get_po = onivia_product_ordering_client.get_product_order(id) 
 
-    assert type(get_po) == dict
-    assert get_po == asdict(Order("1","1","1","1",None))
+    assert type(get_po) == Order
+    assert get_po == Order("1","1","1","1",None)
 
 def test_rubik_owner_oniviav2_client_get_commercial_catalog(mocker, onivia_product_ordering_client): 
     
