@@ -1,8 +1,9 @@
 import requests
 import logging
 from dataclasses import dataclass, asdict
-from typing import Union, List
-from utils import snake_to_camelcase_dict
+from dataclasses_json import dataclass_json, LetterCase, Undefined
+from typing import Union, List, Optional
+from utils import remove_none_values
 
 ## TODO: Implementar refresh_method para controlar expiracion de token
 
@@ -42,54 +43,59 @@ class Mobile:
     city: str
     province: str
 
+@dataclass_json(letter_case=LetterCase.CAMEL, undefined=Undefined.EXCLUDE)
 @dataclass
 class Place:
 
     id: str
 
+@dataclass_json(letter_case=LetterCase.CAMEL, undefined=Undefined.EXCLUDE)
 @dataclass
 class ProductCharacts:
 
     name: str
     value: str
 
+@dataclass_json(letter_case=LetterCase.CAMEL, undefined=Undefined.EXCLUDE)
 @dataclass
 class CustomerAccount: 
 
-    id: str 
+    id: Optional[str]
     first_name: str 
     second_name: str 
     third_name: str 
-    birth_date: str 
+    birth_date: Optional[str] 
     email: str 
     phone: str 
-    phone2: str 
+    phone2: Optional[str] 
     document_type: str 
     document_number: str 
 
+@dataclass_json(letter_case=LetterCase.CAMEL, undefined=Undefined.EXCLUDE)
 @dataclass
 class Product:
 
-    id: str 
-    product_characts: List[ProductCharacts]
-    product_order_items: list 
+    name: str 
+    product_characteristics: List[ProductCharacts]
     customer_account: CustomerAccount
 
+@dataclass_json(letter_case=LetterCase.CAMEL, undefined=Undefined.EXCLUDE)
 @dataclass
 class ProductOrderItem:
 
-    action: str 
     place: Place 
+    action: str 
     product: Product
 
+@dataclass_json(letter_case=LetterCase.CAMEL, undefined=Undefined.EXCLUDE)
 @dataclass
 class Order:
 
-    order_id: str 
+    order_id: Optional[str]
     external_id: str 
-    order_date: str 
+    order_date: Optional[str] 
     request_start_date: str 
-    product_order_item: ProductOrderItem 
+    product_order_item: List[ProductOrderItem]
 
 @dataclass
 class CTO:
@@ -267,9 +273,7 @@ class OniviaProductOrderingClient(OniviaBaseClient):
 
         self._check_login()
 
-        order = asdict(order)
-        order.pop('order_id')
-        order = snake_to_camelcase_dict(order)
+        order = dict(sorted(remove_none_values(order.to_dict()).items()))
 
         return self._post("/productOrderingManagement/productOrder", data=order)
 
@@ -291,7 +295,17 @@ class OniviaProductOrderingClient(OniviaBaseClient):
 
         self._check_login()
 
-        return self._get("/productOrderingManagement/productOrder/{}".format(id))
+        p_o = self._get("/productOrderingManagement/productOrder/{}".format(id))
+
+        res = Order(
+            p_o["orderId"],
+            p_o["externalId"],
+            p_o["orderDate"],
+            p_o["requestStartDate"],
+            p_o["productOrderItem"]
+        )
+
+        return res
     
     def get_commercial_catalog(self) -> list:
 

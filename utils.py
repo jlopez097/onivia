@@ -1,12 +1,10 @@
-from dataclasses import asdict
-
-def snake_to_camelcase(w):
-    l = w.split("_")
-    return "".join([x.capitalize() if i >= 1 else x for i, x in enumerate(l)])
-
-def snake_to_camelcase_dict(d):
-    
-    if type(d) is dict:   
-        return dict([(snake_to_camelcase(k),snake_to_camelcase_dict(v)) for k,v in list(d.items())])
-    else:
-        return d
+def remove_none_values(d):
+    for key in list(d.keys()):
+        if d[key] is None or d[key]==[]:
+            d.pop(key)
+        elif isinstance(d[key], dict):
+            remove_none_values(d[key])
+        elif isinstance(d[key], list):
+            for x in d[key]:
+                remove_none_values(x)
+    return d

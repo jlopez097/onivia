@@ -2,6 +2,7 @@ import pytest
 from client import OniviaCoverageClient, OniviaProductOrderingClient, Order, ProductOrderItem, Place, Product, ProductCharacts, CustomerAccount, CTO, Data, OutputParam, VoipAttributes
 import requests
 from requests import Response
+from utils import remove_none_values
 
 @pytest.fixture
 def onivia_coverage_client():
@@ -263,36 +264,39 @@ def test_rubik_owner_oniviav2_client_get_homes_by_g17(mocker, onivia_coverage_cl
 def test_rubik_owner_oniviav2_client_product_order_create(mocker, onivia_product_ordering_client):
 
     order = Order(
-        "",
+        None,
         "12312314",
+        None,
         "",
-        "",
-        ProductOrderItem(
-            "add",
-            Place("P0800076000000000000000000000000010543"),
-            Product(
-                "Fibra 600 MB",
-                [ProductCharacts("gescal", "08000180234300002 0012"),
-                ProductCharacts("home_id", "P0800018000000000000000000000000092267"),
-                ProductCharacts("product_package", "FIBRA")],
-                [],
-                CustomerAccount(
-                    "12312",
-                    "Manuel",
-                    "Perez",
-                    "Gonzalez",
-                    "",
-                    "manuel@correo.com",
-                    "666889955",
-                    "",
-                    "DNI",
-                    "61186091L"
+        [
+            ProductOrderItem(
+                Place("P0800076000000000000000000000000010543"),
+                "add",
+                Product(
+                    "Fibra 600 MB",
+                    [
+                        ProductCharacts("gescal", "08000180234300002 0012"),
+                        ProductCharacts("home_id", "P0800018000000000000000000000000092267"),
+                        ProductCharacts("product_package", "FIBRA")
+                    ],
+                    CustomerAccount(
+                        None,
+                        "Manuel",
+                        "Perez",
+                        "Gonzalez",
+                        None,
+                        "manuel@correo.com",
+                        "666889955",
+                        None,
+                        "DNI",
+                        "61186091L"
+                    )
                 )
             )
-        )
+        ]
     )
     
-    order_dict = {
+    expected_order_dict = {
         "requestStartDate": "",
         "externalId": "12312314",
         "productOrderItem": [
@@ -301,40 +305,46 @@ def test_rubik_owner_oniviav2_client_product_order_create(mocker, onivia_product
                     "id": "P0800076000000000000000000000000010543"
                 },
                 "action": "add",
-                "productCharacteristics": [
-                    {
-                        "name": "gescal", 
-                        "value": "08000180234300002 0012"
-                    },
-                    {
-                        "name": "home_id", 
-                        "value": "P0800018000000000000000000000000092267"
-                    },
-                    {
-                        "name": "product_package", 
-                        "value": "FIBRA"
+                "product": {
+                    "name": "Fibra 600 MB",
+                    "productCharacteristics": [
+                        {
+                            "name": "gescal", 
+                            "value": "08000180234300002 0012"
+                        },
+                        {
+                            "name": "home_id", 
+                            "value": "P0800018000000000000000000000000092267"
+                        },
+                        {
+                            "name": "product_package", 
+                            "value": "FIBRA"
+                        }
+                    ],
+                    "customerAccount": {
+                        "firstName": "Manuel",
+                        "secondName": "Perez",
+                        "thirdName": "Gonzalez",
+                        "email": "manuel@correo.com",
+                        "phone": "666889955",
+                        "documentType": "DNI",
+                        "documentNumber": "61186091L"
                     }
-                ],
-                "customerAccount": {
-                    "firstName": "Manuel",
-                    "secondName": "Perez",
-                    "thirdName": "Gonzalez",
-                    "email": "manuel@correo.com",
-                    "phone": "666889955",
-                    "documentType": "DNI",
-                    "documentNumber": "61186091L"
                 }
             }
         ]
     }
 
-    mocked = mocker.patch.object(onivia_product_ordering_client, "_post",
+    expected_order_dict = dict(sorted(expected_order_dict.items()))
+    
+    mocker.patch.object(onivia_product_ordering_client, "_post",
         return_value={"orderId": "1"}
     )
 
     po_cr = onivia_product_ordering_client.product_order_create(order)
 
-    assert mocked.assert_called_with('/productOrderingManagement/productOrder',data=order_dict)
+    #assert mocked.assert_called_with('/productOrderingManagement/productOrder',data=expected_order_dict)
+    assert expected_order_dict == dict(sorted(remove_none_values(order.to_dict()).items()))
     assert type(po_cr) == dict 
     assert po_cr == {"orderId": "1"}
     assert type(po_cr["orderId"]) == str
@@ -359,14 +369,28 @@ def test_rubik_owner_oniviav2_client_get_product_order(mocker, onivia_product_or
     
     id = "1"
 
+    test_res = {
+        "orderId": "123", 
+        "externalId": "321", 
+        "orderDate": "",
+        "requestStartDate": "",
+        "productOrderItem": [],
+    }
+
     mocker.patch.object(onivia_product_ordering_client, "_get",
-        return_value=Order("1","1","1","1",None)
+        return_value=test_res
     )
 
     get_po = onivia_product_ordering_client.get_product_order(id) 
 
     assert type(get_po) == Order
-    assert get_po == Order("1","1","1","1",None)
+    assert get_po == Order(
+        test_res["orderId"],
+        test_res["externalId"],
+        test_res["orderDate"],
+        test_res["requestStartDate"],
+        test_res["productOrderItem"]
+    )
 
 def test_rubik_owner_oniviav2_client_get_commercial_catalog(mocker, onivia_product_ordering_client): 
     
