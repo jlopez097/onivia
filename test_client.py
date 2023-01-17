@@ -2,7 +2,6 @@ import pytest
 from client import OniviaCoverageClient, OniviaProductOrderingClient, Order, ProductOrderItem, Place, Product, ProductCharacts, CustomerAccount, CTO, Data, OutputParam, VoipAttributes
 import requests
 from requests import Response
-from utils import remove_none_values
 
 @pytest.fixture
 def onivia_coverage_client():
@@ -36,10 +35,10 @@ def test_rubik_owner_oniviav2_client__get_token(mocker, onivia_coverage_client):
         }
     )
 
-    g_t = onivia_coverage_client._get_token()
+    get_token_response = onivia_coverage_client._get_token()
 
-    assert type(g_t) == dict 
-    assert g_t == {
+    assert type(get_token_response) == dict 
+    assert get_token_response == {
         "access_token": "12345",
         "expires_in": 1800,
         "refresh_expires_in": 1800,
@@ -334,20 +333,16 @@ def test_rubik_owner_oniviav2_client_product_order_create(mocker, onivia_product
             }
         ]
     }
-
-    expected_order_dict = dict(sorted(expected_order_dict.items()))
     
-    mocker.patch.object(onivia_product_ordering_client, "_post",
+    mocked = mocker.patch.object(onivia_product_ordering_client, "_post",
         return_value={"orderId": "1"}
     )
 
-    po_cr = onivia_product_ordering_client.product_order_create(order)
+    product_order_response = onivia_product_ordering_client.product_order_create(order)
 
-    #assert mocked.assert_called_with('/productOrderingManagement/productOrder',data=expected_order_dict)
-    assert expected_order_dict == dict(sorted(remove_none_values(order.to_dict()).items()))
-    assert type(po_cr) == dict 
-    assert po_cr == {"orderId": "1"}
-    assert type(po_cr["orderId"]) == str
+    mocked.assert_called_with('/productOrderingManagement/productOrder', data=expected_order_dict)
+    assert type(product_order_response) == dict 
+    assert product_order_response["orderId"] == "1"
 
 def test_rubik_owner_oniviav2_client_product_order_cancel(mocker, onivia_product_ordering_client):
     
@@ -359,11 +354,11 @@ def test_rubik_owner_oniviav2_client_product_order_cancel(mocker, onivia_product
         return_value={"orderId": "1"}
     )
 
-    poc = onivia_product_ordering_client.product_order_cancel(order_id, requested_cancellation_date, cancellation_reason)
+    product_order_cancel = onivia_product_ordering_client.product_order_cancel(order_id, requested_cancellation_date, cancellation_reason)
 
-    assert type(poc) == dict 
-    assert poc == {"orderId": "1"}
-    assert type(poc['orderId']) == str
+    assert type(product_order_cancel) == dict 
+    assert product_order_cancel == {"orderId": "1"}
+    assert type(product_order_cancel['orderId']) == str
 
 def test_rubik_owner_oniviav2_client_get_product_order(mocker, onivia_product_ordering_client):
     
@@ -381,10 +376,10 @@ def test_rubik_owner_oniviav2_client_get_product_order(mocker, onivia_product_or
         return_value=test_res
     )
 
-    get_po = onivia_product_ordering_client.get_product_order(id) 
+    get_product_order_response = onivia_product_ordering_client.get_product_order(id) 
 
-    assert type(get_po) == Order
-    assert get_po == Order(
+    assert type(get_product_order_response) == Order
+    assert get_product_order_response == Order(
         test_res["orderId"],
         test_res["externalId"],
         test_res["orderDate"],
@@ -413,11 +408,11 @@ def test_rubik_owner_oniviav2_client_get_commercial_catalog(mocker, onivia_produ
         ]
     )
 
-    get_cc = onivia_product_ordering_client.get_commercial_catalog()
+    get_commercial_catalog_response = onivia_product_ordering_client.get_commercial_catalog()
 
-    assert type(get_cc) == list 
-    assert type(get_cc[0]) == dict 
-    assert get_cc == [
+    assert type(get_commercial_catalog_response) == list 
+    assert type(get_commercial_catalog_response[0]) == dict 
+    assert get_commercial_catalog_response == [
         {
             "namingId": "1", 
             "name": "Fibra 600 MB",
@@ -433,11 +428,11 @@ def test_rubik_owner_oniviav2_client_get_commercial_catalog(mocker, onivia_produ
             "contains": [],
         }
     ]
-    assert type(get_cc[0]["namingId"]) == str 
-    assert type(get_cc[0]["name"]) == str 
-    assert type(get_cc[0]["description"]) == str 
-    assert type(get_cc[0]["isBundle"]) == bool 
-    assert type(get_cc[0]["contains"]) == list 
+    assert type(get_commercial_catalog_response[0]["namingId"]) == str 
+    assert type(get_commercial_catalog_response[0]["name"]) == str 
+    assert type(get_commercial_catalog_response[0]["description"]) == str 
+    assert type(get_commercial_catalog_response[0]["isBundle"]) == bool 
+    assert type(get_commercial_catalog_response[0]["contains"]) == list 
 
 def test_rubik_owner_oniviav2_client_get_street_types(mocker, onivia_product_ordering_client):
     
@@ -454,11 +449,11 @@ def test_rubik_owner_oniviav2_client_get_street_types(mocker, onivia_product_ord
         ]
     )
 
-    get_st = onivia_product_ordering_client.get_street_types()
+    get_street_types_response = onivia_product_ordering_client.get_street_types()
 
-    assert type(get_st) == list 
-    assert type(get_st[0]) == dict 
-    assert get_st == [
+    assert type(get_street_types_response) == list 
+    assert type(get_street_types_response[0]) == dict 
+    assert get_street_types_response == [
         {
             "id": "1",
             "name": "Alameda",
@@ -468,8 +463,8 @@ def test_rubik_owner_oniviav2_client_get_street_types(mocker, onivia_product_ord
             "name": "Aldea",
         }
     ]
-    assert type(get_st[0]["id"]) == str 
-    assert type(get_st[0]["name"]) == str 
+    assert type(get_street_types_response[0]["id"]) == str 
+    assert type(get_street_types_response[0]["name"]) == str 
 
 def test_rubik_owner_oniviav2_client_get_provinces(mocker, onivia_product_ordering_client):
     
@@ -486,11 +481,11 @@ def test_rubik_owner_oniviav2_client_get_provinces(mocker, onivia_product_orderi
         ]
     )
 
-    get_provinces = onivia_product_ordering_client.get_provinces() 
+    get_provinces_response = onivia_product_ordering_client.get_provinces() 
 
-    assert type(get_provinces) == list 
-    assert type(get_provinces[0]) == dict 
-    assert get_provinces == [
+    assert type(get_provinces_response) == list 
+    assert type(get_provinces_response[0]) == dict 
+    assert get_provinces_response == [
         {
             "id": "47",
             "name": "A CORUÑA",
@@ -500,8 +495,8 @@ def test_rubik_owner_oniviav2_client_get_provinces(mocker, onivia_product_orderi
             "name": "ALAVA",
         }
     ]
-    assert type(get_provinces[0]["id"]) == str 
-    assert type(get_provinces[0]["name"]) == str
+    assert type(get_provinces_response[0]["id"]) == str 
+    assert type(get_provinces_response[0]["name"]) == str
 
 def test_rubik_owner_oniviav2_client_get_donor_operators(mocker, onivia_product_ordering_client):
     
@@ -520,11 +515,11 @@ def test_rubik_owner_oniviav2_client_get_donor_operators(mocker, onivia_product_
         ]
     )
 
-    get_do = onivia_product_ordering_client.get_donor_operators() 
+    get_donor_operators_response = onivia_product_ordering_client.get_donor_operators() 
 
-    assert type(get_do) == list 
-    assert type(get_do[0]) == dict 
-    assert get_do == [
+    assert type(get_donor_operators_response) == list 
+    assert type(get_donor_operators_response[0]) == dict 
+    assert get_donor_operators_response == [
         {
             "id": "1",
             "name": "MOVISTAR",
@@ -536,9 +531,9 @@ def test_rubik_owner_oniviav2_client_get_donor_operators(mocker, onivia_product_
             "isEnabled": "true"
         }
     ]
-    assert type(get_do[0]["id"]) == str 
-    assert type(get_do[0]["name"]) == str
-    assert type(get_do[0]["isEnabled"]) == str
+    assert type(get_donor_operators_response[0]["id"]) == str 
+    assert type(get_donor_operators_response[0]["name"]) == str
+    assert type(get_donor_operators_response[0]["isEnabled"]) == str
 
 def test_rubik_owner_oniviav2_client_get_reasons(mocker, onivia_product_ordering_client):
     
@@ -557,11 +552,11 @@ def test_rubik_owner_oniviav2_client_get_reasons(mocker, onivia_product_ordering
         ]
     )
 
-    get_r = onivia_product_ordering_client.get_reasons() 
+    get_reasons_response = onivia_product_ordering_client.get_reasons() 
 
-    assert type(get_r) == list 
-    assert type(get_r[0]) == dict 
-    assert get_r == [
+    assert type(get_reasons_response) == list 
+    assert type(get_reasons_response[0]) == dict 
+    assert get_reasons_response == [
         {
             "id": "1",
             "name": "Defunción",
@@ -573,9 +568,9 @@ def test_rubik_owner_oniviav2_client_get_reasons(mocker, onivia_product_ordering
             "isEnabled": "true"
         }
     ]
-    assert type(get_r[0]["id"]) == str 
-    assert type(get_r[0]["name"]) == str
-    assert type(get_r[0]["isEnabled"]) == str
+    assert type(get_reasons_response[0]["id"]) == str 
+    assert type(get_reasons_response[0]["name"]) == str
+    assert type(get_reasons_response[0]["isEnabled"]) == str
 
 def test_rubik_owner_oniviav2_client_get_additional_info(mocker, onivia_product_ordering_client):
     
@@ -592,11 +587,11 @@ def test_rubik_owner_oniviav2_client_get_additional_info(mocker, onivia_product_
         ]
     )
 
-    get_ai = onivia_product_ordering_client.get_additional_info() 
+    get_additional_info_response = onivia_product_ordering_client.get_additional_info() 
 
-    assert type(get_ai) == list 
-    assert type(get_ai[0]) == dict 
-    assert get_ai == [
+    assert type(get_additional_info_response) == list 
+    assert type(get_additional_info_response[0]) == dict 
+    assert get_additional_info_response == [
         {
             "id": "1",
             "additional_info": []
@@ -606,8 +601,8 @@ def test_rubik_owner_oniviav2_client_get_additional_info(mocker, onivia_product_
             "additional_info": []
         }
     ]
-    assert type(get_ai[0]["id"]) == str 
-    assert type(get_ai[0]["additional_info"]) == list
+    assert type(get_additional_info_response[0]["id"]) == str 
+    assert type(get_additional_info_response[0]["additional_info"]) == list
 
 def test_rubik_owner_oniviav2_client_cto_query(mocker, onivia_product_ordering_client):
     
@@ -633,10 +628,10 @@ def test_rubik_owner_oniviav2_client_cto_query(mocker, onivia_product_ordering_c
         }
     )
 
-    cto_q = onivia_product_ordering_client.cto_query(product_id,cto_code) 
+    cto_query_response = onivia_product_ordering_client.cto_query(product_id,cto_code) 
 
-    assert type(cto_q) == dict
-    assert cto_q == {
+    assert type(cto_query_response) == dict
+    assert cto_query_response == {
         "codResultado": "000",
         "descResultado": "Proceso ejecutado correctamente",
         "listactos": {
@@ -652,11 +647,11 @@ def test_rubik_owner_oniviav2_client_cto_query(mocker, onivia_product_ordering_c
             ]
         }
     }
-    assert type(cto_q["codResultado"]) == str 
-    assert type(cto_q["descResultado"]) == str
-    assert type(cto_q["listactos"]) == dict 
-    assert type(cto_q["listactos"]["cto"]) == list 
-    assert type(cto_q["listactos"]["cto"][0]) == CTO
+    assert type(cto_query_response["codResultado"]) == str 
+    assert type(cto_query_response["descResultado"]) == str
+    assert type(cto_query_response["listactos"]) == dict 
+    assert type(cto_query_response["listactos"]["cto"]) == list 
+    assert type(cto_query_response["listactos"]["cto"][0]) == CTO
 
 def test_rubik_owner_oniviav2_client_cto_change(mocker, onivia_product_ordering_client):
 
@@ -683,11 +678,11 @@ def test_rubik_owner_oniviav2_client_cto_change(mocker, onivia_product_ordering_
         }
     )
 
-    cto_ch = onivia_product_ordering_client.cto_change(product_id, cto_final_code,
+    cto_change_response = onivia_product_ordering_client.cto_change(product_id, cto_final_code,
     cto_final_port, sp2_final_code, sp2_final_port, reason)
 
-    assert type(cto_ch) == dict
-    assert cto_ch == {
+    assert type(cto_change_response) == dict
+    assert cto_change_response == {
         "codResultado": "123",
         "descResultado": "XXX",
         "idadministrativo": "",
@@ -700,17 +695,17 @@ def test_rubik_owner_oniviav2_client_cto_change(mocker, onivia_product_ordering_
         "ontid": "",
         "gestorvertical": ""
     }
-    assert type(cto_ch["codResultado"]) == str 
-    assert type(cto_ch["descResultado"]) == str
-    assert type(cto_ch["idadministrativo"]) == str
-    assert type(cto_ch["codigoctofinal"]) == str
-    assert type(cto_ch["puertoctofinal"]) == str
-    assert type(cto_ch["codigosp2final"]) == str
-    assert type(cto_ch["olt"]) == str
-    assert type(cto_ch["tarjeta"]) == str
-    assert type(cto_ch["puertopon"]) == str
-    assert type(cto_ch["ontid"]) == str
-    assert type(cto_ch["gestorvertical"]) == str
+    assert type(cto_change_response["codResultado"]) == str 
+    assert type(cto_change_response["descResultado"]) == str
+    assert type(cto_change_response["idadministrativo"]) == str
+    assert type(cto_change_response["codigoctofinal"]) == str
+    assert type(cto_change_response["puertoctofinal"]) == str
+    assert type(cto_change_response["codigosp2final"]) == str
+    assert type(cto_change_response["olt"]) == str
+    assert type(cto_change_response["tarjeta"]) == str
+    assert type(cto_change_response["puertopon"]) == str
+    assert type(cto_change_response["ontid"]) == str
+    assert type(cto_change_response["gestorvertical"]) == str
 
 def test_rubik_owner_oniviav2_client_exec_test(mocker, onivia_product_ordering_client):
 
@@ -736,10 +731,10 @@ def test_rubik_owner_oniviav2_client_exec_test(mocker, onivia_product_ordering_c
         }
     )
 
-    e_t = onivia_product_ordering_client.exec_test(product_id, test_id)
+    exec_test_response = onivia_product_ordering_client.exec_test(product_id, test_id)
 
-    assert type(e_t) == dict
-    assert e_t == {
+    assert type(exec_test_response) == dict
+    assert exec_test_response == {
         "conclusion": "OK",
         "codigo": "000",
         "descripcion": "Test ejecutado correctamente",
@@ -750,12 +745,12 @@ def test_rubik_owner_oniviav2_client_exec_test(mocker, onivia_product_ordering_c
             "datosConsulta": None,
         }
     }
-    assert type(e_t["conclusion"]) == str 
-    assert type(e_t["codigo"]) == str 
-    assert type(e_t["descripcion"]) == str 
-    assert type(e_t["fecha"]) == str 
-    assert type(e_t["resultado"]) == dict 
-    assert type(e_t["resultado"]["datos"]) == Data
+    assert type(exec_test_response["conclusion"]) == str 
+    assert type(exec_test_response["codigo"]) == str 
+    assert type(exec_test_response["descripcion"]) == str 
+    assert type(exec_test_response["fecha"]) == str 
+    assert type(exec_test_response["resultado"]) == dict 
+    assert type(exec_test_response["resultado"]["datos"]) == Data
 
 def test_rubik_owner_oniviav2_client_voip_mod(mocker, onivia_product_ordering_client):
 

@@ -145,7 +145,7 @@ class OniviaBaseClient:
         self.last_request = None
         self.last_response = None
 
-    def _post(self, path: str, data) -> dict:
+    def _post(self, path: str, data={}) -> dict:
 
         headers = {
             'Content-Type': 'application/json',
@@ -273,7 +273,7 @@ class OniviaProductOrderingClient(OniviaBaseClient):
 
         self._check_login()
 
-        order = dict(sorted(remove_none_values(order.to_dict()).items()))
+        order = remove_none_values(order.to_dict())
 
         return self._post("/productOrderingManagement/productOrder", data=order)
 
